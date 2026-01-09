@@ -23,18 +23,28 @@ export function useAudioRecorder(onAudioChunk: (blob: Blob) => void) {
                 mimeType: 'audio/webm'
             });
 
+            console.log("MediaRecorder mimeType:", mediaRecorder.mimeType);
+            console.log("Supported mimeTypes:", MediaRecorder.isTypeSupported('audio/webm'));
             //save recorder to control it
             mediaRecorderRef.current = mediaRecorder; 
 
             // event that mediaRecorder has audio data ready and sends it via webSocket
+            let chunkCount = 0;
             mediaRecorder.ondataavailable = (event) => {
+                chunkCount++;
+                console.log(`Chunk #${chunkCount} received, size: ${event.data.size} bytes`);
                 if (event.data.size > 0){
+                    console.log("Sending chunk to handler, size:", event.data.size);
                     onAudioChunk(event.data);
+                } else {
+                    console.warn(`Chunk #${chunkCount} size is 0, not sending`);
                 }
             }
 
             //start recording with 250 mls chunks
+            console.log("Starting MediaRecorder, state:", mediaRecorder.state);
             mediaRecorder.start(250);
+            console.log("MediaRecorder started, state:", mediaRecorder.state);
 
             SetIsRecording(true);
 

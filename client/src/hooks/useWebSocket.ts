@@ -57,7 +57,9 @@ export function useWebSocket(url: string) {
   };
 
   const sendAudioChunk = (audioBlob: Blob) => {
+    console.log("sendAudioChunk called, blob size:", audioBlob.size, "WebSocket readyState:", ws.current?.readyState);
     if (ws.current && ws.current.readyState === WebSocket.OPEN){
+      console.log("Sending audio blob to server");
       ws.current.send(audioBlob);
     } else {
       console.warn("Websocket is not connected");

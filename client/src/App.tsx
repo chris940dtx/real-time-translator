@@ -8,6 +8,7 @@ function App() {
   );
   //handles audio chunks, runs every time we get audio data
   const handleAudioChunk = (blob: Blob) => {
+    console.log("handleAudioChunk called, blob size:", blob.size, "bytes");
     //send audio chunk to server via websocket
     sendAudioChunk(blob);
   };
