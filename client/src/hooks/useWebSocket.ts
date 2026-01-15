@@ -56,9 +56,9 @@ export function useWebSocket(url: string) {
     }
   };
 
-  const sendAudioChunk = (audioBlob: Blob) => {
+  const sendAudioChunk = (audioData: ArrayBuffer) => {
     if (ws.current && ws.current.readyState === WebSocket.OPEN) {
-      ws.current.send(audioBlob);
+      ws.current.send(audioData);
     }
   };
 

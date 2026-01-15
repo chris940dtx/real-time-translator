@@ -7,9 +7,9 @@ function App() {
     "ws://localhost:8000/ws"
   );
   //handles audio chunks, runs every time we get audio data
-  const handleAudioChunk = (blob: Blob) => {
+  const handleAudioChunk = (pcmData : ArrayBuffer) => {
     //send audio chunk to server via websocket
-    sendAudioChunk(blob);
+    sendAudioChunk(pcmData);
   };
   //audio recorder hook, passing handler func
   const { isRecording, error, startRecording, stopRecording } =
