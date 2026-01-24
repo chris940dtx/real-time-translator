@@ -33,6 +33,7 @@ server/venv/
 .env.local
 .env.*.local
 *.env
+server/.env
 
 # IDEs and Editors
 .vscode/
