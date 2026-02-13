@@ -1,11 +1,15 @@
 from dotenv import load_dotenv
 import os
+from concurrent.futures import ThreadPoolExecutor
 from fastapi import FastAPI, WebSocket, WebSocketDisconnect
 import asyncio
 from deepgram import AsyncDeepgramClient
 from deepgram.core.events import EventType
 #from deepgram.extensions.types.sockets import ListenV1SocketClientResponse, ListenV1MediaMessage 
 from typing import Any
+from deepl.exceptions import DeepLException
+
+from translation import translate_text_sync
 
 load_dotenv()
 DEEPGRAM_API_KEY = os.getenv("DEEPGRAM_API_KEY")
@@ -14,6 +18,9 @@ if not DEEPGRAM_API_KEY:
     raise ValueError("Deepgram api key not found in enviorment variables")
 
 deepgram_client = AsyncDeepgramClient(api_key=DEEPGRAM_API_KEY)
+
+# Thread pool for running sync DeepL calls so we don't block the event loop
+_translation_executor = ThreadPoolExecutor(max_workers=4, thread_name_prefix="deepl")
 
 app = FastAPI()
 
@@ -36,10 +43,24 @@ async def websocket_endpoint(websocket: WebSocket):
     ) as connection:
         connection_open = True
 
-        #callback to receive transcript
+        #callback to receive transcript, ITS SYNC function not async
+        #:. create_task() is used to schedule onto our outter Websocket loop
         #if msg not = "Reseults", return
         #extract transcript into "text" from channel.alt[0].transc
         #if txt is emtpy , return
+        async def translate_and_send(text: str) -> None:
+            try:
+                translated = await loop.run_in_executor(
+                    _translation_executor, translate_text_sync, text
+                )
+                await websocket.send_text(translated)
+            except DeepLException as e:
+                print(f"[DeepL error] {e}")
+                await websocket.send_text(text)  # fallback: send original transcript
+            except Exception as e:
+                print(f"[Translation error] {e}")
+                await websocket.send_text(text)
+
         def on_transcript(message: Any) -> None:
 
             if getattr(message, "type", None) != "Results":
@@ -53,12 +74,10 @@ async def websocket_endpoint(websocket: WebSocket):
                 if not text:
                     return
                 print(f"[Transcript] {text!r}")
-                loop.create_task(websocket.send_text(text))
+                # translate in thread, then send translated text to client
+                loop.create_task(translate_and_send(text))
             except Exception:
                 return
-            #test to see deepgram response format
-            #transcript_text = parse_transcript(message)
-            #loop.create_task(websocket.send_text(transcript_text)) # need callback to be async
 
         def on_error(error: Any) -> None:
             nonlocal connection_open
